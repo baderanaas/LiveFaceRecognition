@@ -1,3 +1,4 @@
 /locked
 /__pycache__
 /data/*/
+/FaceRecognitionRepo/vgg_face_weights.h5

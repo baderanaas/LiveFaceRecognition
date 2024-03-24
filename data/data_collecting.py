@@ -15,7 +15,7 @@ mtcnn_detector = MTCNN(scale_factor=0.7, min_face_size=20)
 face_count = 0
 studentID = input("Enter your student ID: ")
 
-folderPath = f"./{studentID}"
+folderPath = f"data/{studentID}"
 os.makedirs(folderPath, exist_ok=True)
 
 # Initialize pygame mixer
