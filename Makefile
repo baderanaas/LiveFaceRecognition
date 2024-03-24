@@ -1,2 +1,5 @@
 pyrun:
-	python -u "d:\INSAT\RT3\PPP\main.py"
+	python main.py
+
+generate:
+	python EncodingGenerator.py
