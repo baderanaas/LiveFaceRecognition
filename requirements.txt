@@ -3,3 +3,6 @@ dlib
 cmake
 face-recognition
 cvzone
+matplotlib
+torch
+tensorflow==2.6.0
