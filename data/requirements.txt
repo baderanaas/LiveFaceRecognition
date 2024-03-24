@@ -1,4 +1,0 @@
-pygame
-time
-opencv-python==4.5.4.60
-mtcnn

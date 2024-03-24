@@ -22,7 +22,7 @@ os.makedirs(folderPath, exist_ok=True)
 pygame.mixer.init()
 
 # Load the sound file
-sound_file = "sound.wav"
+sound_file = "data/sound.wav"
 pygame.mixer.music.load(sound_file)
 
 # Play the sound
