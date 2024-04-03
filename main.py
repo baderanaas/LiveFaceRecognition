@@ -5,6 +5,11 @@ from facenet_pytorch import MTCNN
 import os
 import time
 from datetime import datetime
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["FaceDetection"]
+collection = db["Attendance"]
 
 mtcnn = MTCNN(
     image_size=160, margin=14, min_face_size=20, device="cpu", post_process=False
@@ -65,7 +70,7 @@ while True:
             face_results.append(face_result)
 
     for face_result in face_results:
-        if float(face_result["confidence"]) > 0.85:
+        if float(face_result["confidence"]) > 0.9:
             if face_result["id"] not in records.keys():
                 records[face_result["id"]] = {
                     "time": face_result["time"],
@@ -80,6 +85,20 @@ while True:
                         "t": face_result["t"],
                     }
     print(records)
+
+    for record_id, record in records.items():
+        record_data = {"id": record_id, **record}
+        result = collection.update_one(
+            {
+                "$and": [
+                    {"id": record_id},
+                    {"time": record["time"]},
+                    {"day": record["day"]},
+                ]
+            },
+            {"$setOnInsert": record_data},
+            upsert=True,
+        )
 
     if cv2.waitKey(1) == ord("q"):
         break

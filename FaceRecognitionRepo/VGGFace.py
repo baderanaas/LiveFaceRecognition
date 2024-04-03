@@ -50,6 +50,6 @@ class VGGFace:
 
         y_predict = self.clf.predict_proba(embedding_vector_pca)[0]
 
-        result = np.where(y_predict > 0.5)[0]
+        result = np.where(y_predict > 0.3)[0]
 
         return result, y_predict
