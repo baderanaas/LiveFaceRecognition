@@ -1,69 +1,88 @@
 import cv2
-from FaceRecognitionRepo import VGGFace    
+from FaceRecognitionRepo.VGGFace import VGGFace
 import numpy as np
-import matplotlib.pyplot as plt
 from facenet_pytorch import MTCNN
 import os
+import time
+from datetime import datetime
 
-mtcnn = MTCNN(image_size=160, margin=14, min_face_size=20,device='cpu', post_process=False)
+mtcnn = MTCNN(
+    image_size=160, margin=14, min_face_size=20, device="cpu", post_process=False
+)
 
-cap=cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1200)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1600)
 
-size = (1600, 1200)
+classes = {"2100270": 0, "2100432": 1}
 
-result_video = cv2.VideoWriter('Face.avi', 
-                         cv2.VideoWriter_fourcc(*'MJPG'),
-                         10, size)
+
+def ImageClass(n):
+    for x, y in classes.items():
+        if n == y:
+            return x
+
 
 vgg = VGGFace()
-
+records = {}
 other = 0
-while True :
+while True:
     ret, frame = cap.read()
     if not ret:
-        break  
-    frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-    frame=cv2.resize(frame,(1600,1200),interpolation=cv2.INTER_CUBIC)
-    frame=cv2.GaussianBlur(frame, ksize=(3,3), sigmaX=0)
+        break
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = cv2.resize(frame, (1600, 1200), interpolation=cv2.INTER_CUBIC)
+    frame = cv2.GaussianBlur(frame, ksize=(3, 3), sigmaX=0)
     frame_face = frame.copy()
-    frame_face=cv2.resize(frame_face,(640,640),interpolation=cv2.INTER_CUBIC)
+    frame_face = cv2.resize(frame_face, (640, 640), interpolation=cv2.INTER_CUBIC)
     boxes, probs = mtcnn.detect(frame_face, landmarks=False)
 
     face_results = []
 
     if not probs.all() == None and probs.all() > 0.6:
         for x1, y1, x2, y2 in boxes:
-            x1, x2, y1, y2 = int(x1) * 1600 // 640, int(x2) * 1600 // 640, int(y1) * 1200 // 640, int(y2) * 1200 // 640
+            x1, x2, y1, y2 = (
+                int(x1) * 1600 // 640,
+                int(x2) * 1600 // 640,
+                int(y1) * 1200 // 640,
+                int(y2) * 1200 // 640,
+            )
             roi = frame[y1:y2, x1:x2]
-            result, y_predict = vgg.Face_Recognition(roi)
-            face_result = {}
+            result, y_predict = vgg.face_recognition(roi)
+            face_result = dict()
             if len(result) > 1:
-                face_result['label'] = result[0]
-                face_result['confidence'] = str(np.round(y_predict[result[0]], 2))
-            elif len(result) == 0:
-                roi = cv2.cvtColor(roi, cv2.COLOR_RGB2BGR)
-                folderPath = f"data/other"
-                os.makedirs(folderPath, exist_ok=True)
-                cv2.imwrite(os.path.join(folderPath, f"face_{other}.jpg"), roi)
-                face_result['label'] = 'Other'
-                other += 1
-            else:
-                face_result['label'] = result
-                face_result['confidence'] = str(np.round(y_predict[result[0]], 2))
-            face_result['box'] = (x1, y1, x2, y2)
+                face_result["id"] = ImageClass(result[0])
+                face_result["confidence"] = str(np.round(y_predict[result[0]], 2))
+            elif len(result) == 1:
+                face_result["id"] = ImageClass(result[0])
+                face_result["confidence"] = str(np.round(y_predict[result[0]], 2))
+            secs = time.time()
+            current_time_struct = time.localtime()
+            formatted_time = time.strftime("%H:%M:%S", current_time_struct)
+            face_result["time"] = formatted_time
+            face_result["day"] = current_time_struct.tm_mday
+            face_result["t"] = secs
             face_results.append(face_result)
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-    result_video.write(frame)
-    cv2.imshow('frame', frame)
-    if cv2.waitKey(1) == ord('q'):
+    for face_result in face_results:
+        if float(face_result["confidence"]) > 0.85:
+            if face_result["id"] not in records.keys():
+                records[face_result["id"]] = {
+                    "time": face_result["time"],
+                    "day": face_result["day"],
+                    "t": face_result["t"],
+                }
+            else:
+                if time.time() - records[face_result["id"]]["t"] > 1800:
+                    records[face_result["id"]] = {
+                        "time": face_result["time"],
+                        "day": face_result["day"],
+                        "t": face_result["t"],
+                    }
+    print(records)
+
+    if cv2.waitKey(1) == ord("q"):
         break
 
-    print(face_results)
-
 cap.release()
-result_video.release()
-cv2.destroyAllWindows() 
+cv2.destroyAllWindows()

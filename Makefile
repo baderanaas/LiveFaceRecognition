@@ -1,4 +1,4 @@
-pyrun:
+run:
 	python main.py
 
 generate:

@@ -31,7 +31,7 @@ pygame.mixer.music.play()
 # Allow some time for the sound to finish playing
 while pygame.mixer.music.get_busy():
     time.sleep(2)
-    
+
 start_time = time.time()
 
 while True:
@@ -54,15 +54,15 @@ while True:
 
     # Find the faces in the current frame
     if data:
-        
-        bbox = [
-                int(data[0]["box"][0] / 1.5),
-                int(data[0]["box"][1] / 1.5),
-                int(data[0]["box"][2] / 1.5),
-                int(data[0]["box"][3] / 1.5),
-            ]
 
-            # Extract and save the face region
+        bbox = [
+            int(data[0]["box"][0] / 1.5),
+            int(data[0]["box"][1] / 1.5),
+            int(data[0]["box"][2] / 1.5),
+            int(data[0]["box"][3] / 1.5),
+        ]
+
+        # Extract and save the face region
         x, y, w, h = bbox
         face_region = frame[y : y + h, x : x + w]
         print(face_count)
@@ -71,7 +71,7 @@ while True:
         start_time = time.time()
     else:
         continue
-            
+
     data.clear()
 
 cap.release()
