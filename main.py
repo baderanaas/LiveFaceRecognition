@@ -4,11 +4,15 @@ import numpy as np
 from facenet_pytorch import MTCNN
 import os
 import time
-from datetime import datetime
+from dotenv import load_dotenv
 from pymongo import MongoClient
 
-client = MongoClient("mongodb://localhost:27017/")
-db = client["FaceDetection"]
+load_dotenv()
+
+client_id = os.getenv("ANAS_KEY")
+
+client = MongoClient(client_id)
+db = client["PPP"]
 collection = db["Attendance"]
 
 mtcnn = MTCNN(

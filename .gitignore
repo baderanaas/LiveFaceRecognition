@@ -3,3 +3,4 @@
 /FaceRecognitionRepo/__pycache__
 /data/*/
 /FaceRecognitionRepo/models/*
+.env
