@@ -12,7 +12,7 @@ load_dotenv()
 client_id = os.getenv("ANAS_KEY")
 
 client = MongoClient(client_id)
-db = client["PPP"]
+db = client["FaceDetection"]
 collection = db["Attendance"]
 
 mtcnn = MTCNN(
@@ -23,7 +23,17 @@ cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1200)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1600)
 
-classes = {"2100270": 0, "2100432": 1}
+data_folder_path = "data"
+folder_names = [
+    name
+    for name in os.listdir(data_folder_path)
+    if os.path.isdir(os.path.join(data_folder_path, name))
+]
+
+classes = {}
+
+for index, folder_name in enumerate(folder_names):
+    classes[folder_name] = index
 
 
 def ImageClass(n):
