@@ -45,12 +45,16 @@ def ImageClass(n):
 vgg = VGGFace()
 records = {}
 other = 0
+font_scale = 1
+font_thickness = 2
+
 while True:
     ret, frame = cap.read()
     if not ret:
         break
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     frame = cv2.resize(frame, (1600, 1200), interpolation=cv2.INTER_CUBIC)
+    frame_show = frame.copy()
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     frame = cv2.GaussianBlur(frame, ksize=(3, 3), sigmaX=0)
     frame_face = frame.copy()
     frame_face = cv2.resize(frame_face, (640, 640), interpolation=cv2.INTER_CUBIC)
@@ -75,6 +79,13 @@ while True:
             elif len(result) == 1:
                 face_result["id"] = ImageClass(result[0])
                 face_result["confidence"] = str(np.round(y_predict[result[0]], 2))
+            
+            cv2.rectangle(frame_show, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            text_size = cv2.getTextSize(face_result["id"], cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)[0]
+            text_x = x1 + 10
+            text_y = y1 + text_size[1] + 10
+            cv2.putText(frame_show, face_result["id"], (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), font_thickness)
+            
             secs = time.time()
             current_time_struct = time.localtime()
             formatted_time = time.strftime("%H:%M:%S", current_time_struct)
@@ -113,7 +124,8 @@ while True:
             {"$setOnInsert": record_data},
             upsert=True,
         )
-
+        
+    cv2.imshow("Video", frame_show)
     if cv2.waitKey(1) == ord("q"):
         break
 
