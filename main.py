@@ -4,8 +4,36 @@ import numpy as np
 from facenet_pytorch import MTCNN
 import os
 import time
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pymongo import MongoClient
+
+
+def updating_lists(room):
+    today = datetime.now().strftime("%A")
+
+    lectures = []
+
+    query = {"Room": room, "Day": today}
+    sort_order = [("StartTime", 1)]
+
+    result = timetable.find(query).sort(sort_order)
+    for doc in result:
+        lectures.append(doc)
+
+    students_query = {"class_id": lectures[0]["class_id"]}
+
+    lt = []
+    students = student.find(students_query)
+    for st in students:
+        lt.append(st["Student_id"])
+
+    teacher_query = {"_id": lectures[0]["teacher_id"]}
+    teachr = teacher.find_one(teacher_query)
+    lt.append(teachr["CIN"])
+
+    return lectures, lt, today
+
 
 load_dotenv()
 
@@ -13,7 +41,15 @@ client_id = os.getenv("ANAS_KEY")
 
 client = MongoClient(client_id)
 db = client["FaceDetection"]
-collection = db["Attendance"]
+attendance = db["Attendance"]
+timetable = db["Time_table"]
+teacher = db["Teacher"]
+subject = db["Subject"]
+classe = db["Class"]
+student = db["Student"]
+
+# room = input("Enter the room number: ")
+room = "111"
 
 mtcnn = MTCNN(
     image_size=160, margin=14, min_face_size=20, device="cpu", post_process=False
@@ -48,7 +84,32 @@ other = 0
 font_scale = 1
 font_thickness = 2
 
+lectures, lt, day = updating_lists(room)
+
+
 while True:
+    now = datetime.now().time()
+    today = datetime.now().strftime("%A")
+
+    if day != today:
+        records = {}
+        lectures, lt, day = updating_lists(room)
+
+    if len(lectures) == 0:
+        continue
+
+    while now >= datetime.strptime(lectures[0]["EndTime"], "%H:%M").time():
+        records = {}
+        lectures.pop(0)
+        if not lectures:
+            break
+
+    if len(lectures) == 0:
+        continue
+
+    if now < datetime.strptime(lectures[0]["StartTime"], "%H:%M").time():
+        continue
+
     ret, frame = cap.read()
     if not ret:
         break
@@ -73,58 +134,61 @@ while True:
             roi = frame[y1:y2, x1:x2]
             result, y_predict = vgg.face_recognition(roi)
             face_result = dict()
-            if len(result) > 1:
+            if len(result) >= 1:
                 face_result["id"] = ImageClass(result[0])
                 face_result["confidence"] = str(np.round(y_predict[result[0]], 2))
-            elif len(result) == 1:
-                face_result["id"] = ImageClass(result[0])
-                face_result["confidence"] = str(np.round(y_predict[result[0]], 2))
-            
-            cv2.rectangle(frame_show, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            text_size = cv2.getTextSize(face_result["id"], cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)[0]
-            text_x = x1 + 10
-            text_y = y1 + text_size[1] + 10
-            cv2.putText(frame_show, face_result["id"], (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), font_thickness)
-            
-            secs = time.time()
+
+                cv2.rectangle(frame_show, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                text_size = cv2.getTextSize(
+                    face_result["id"],
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    font_scale,
+                    font_thickness,
+                )[0]
+                text_x = x1 + 10
+                text_y = y1 + text_size[1] + 10
+                cv2.putText(
+                    frame_show,
+                    face_result["id"],
+                    (text_x, text_y),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    font_scale,
+                    (0, 255, 0),
+                    font_thickness,
+                )
+
             current_time_struct = time.localtime()
-            formatted_time = time.strftime("%H:%M:%S", current_time_struct)
-            face_result["time"] = formatted_time
-            face_result["day"] = current_time_struct.tm_mday
-            face_result["t"] = secs
+            formatted_time = time.strftime("%Y-%m-%dT%H:%M:%S", current_time_struct)
+            face_result["date"] = formatted_time
             face_results.append(face_result)
 
+    if len(face_results) == 0:
+        continue
+
     for face_result in face_results:
-        if float(face_result["confidence"]) > 0.9:
-            if face_result["id"] not in records.keys():
-                records[face_result["id"]] = {
-                    "time": face_result["time"],
-                    "day": face_result["day"],
-                    "t": face_result["t"],
-                }
-            else:
-                if time.time() - records[face_result["id"]]["t"] > 1800:
+        if face_result["id"] in lt:
+            if float(face_result["confidence"]) > 0.9:
+                if face_result["id"] not in records.keys():
                     records[face_result["id"]] = {
-                        "time": face_result["time"],
-                        "day": face_result["day"],
-                        "t": face_result["t"],
+                        "day": face_result["date"],
                     }
-    print(records)
+                    lt.remove(face_result["id"])
+
+    # print(records)
 
     for record_id, record in records.items():
         record_data = {"id": record_id, **record}
-        result = collection.update_one(
+        result = attendance.update_one(
             {
                 "$and": [
                     {"id": record_id},
-                    {"time": record["time"]},
                     {"day": record["day"]},
                 ]
             },
             {"$setOnInsert": record_data},
             upsert=True,
         )
-        
+
     cv2.imshow("Video", frame_show)
     if cv2.waitKey(1) == ord("q"):
         break
