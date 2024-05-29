@@ -11,10 +11,17 @@ from pymongo import MongoClient, errors
 
 def updating_lists(room):
     today = datetime.now().strftime("%A")
+    month = int(datetime.now().strftime("%m"))
+
+    if month <= 12 and month >= 9:
+        semestre = 1
+    elif month >= 1 and month <= 5:
+        semestre = 2
+
     lectures = []
 
     try:
-        query = {"Room": room, "Day": today}
+        query = {"Room": room, "Day": today, "Semestre": semestre}
         sort_order = [("StartTime", 1)]
 
         result = timetable.find(query).sort(sort_order)
@@ -34,9 +41,9 @@ def updating_lists(room):
 
     except errors.PyMongoError as e:
         print(f"Database error: {e}")
-        return [], [], today
+        return [], [], today, semestre
 
-    return lectures, lt, today
+    return lectures, lt, today, semestre
 
 
 load_dotenv()
@@ -87,15 +94,16 @@ other = 0
 font_scale = 1
 font_thickness = 2
 
-lectures, lt, day = updating_lists(room)
+lectures, lt, day, semestre = updating_lists(room)
 
 while True:
     now = datetime.now().time()
     today = datetime.now().strftime("%A")
+    month = int(datetime.now().strftime("%m"))
 
     if day != today:
         records = {}
-        lectures, lt, day = updating_lists(room)
+        lectures, lt, day, semestre = updating_lists(room)
 
     if len(lectures) == 0:
         continue
