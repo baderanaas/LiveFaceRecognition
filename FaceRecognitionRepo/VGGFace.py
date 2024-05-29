@@ -4,15 +4,7 @@ from joblib import load
 from numpy import expand_dims
 from cv2 import resize, INTER_CUBIC
 import tensorflow
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import (
-    ZeroPadding2D,
-    Convolution2D,
-    MaxPooling2D,
-    Flatten,
-    Activation,
-    Dropout,
-)
+from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.models import load_model
 
