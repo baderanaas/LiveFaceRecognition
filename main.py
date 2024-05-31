@@ -33,17 +33,18 @@ def updating_lists(room):
             students_query = {"class_id": lectures[0]["class_id"]}
             students = student.find(students_query)
             for st in students:
-                lt.append(st["Student_id"])
+                lt.append(str(st["Student_id"]))
 
             teacher_query = {"_id": lectures[0]["teacher_id"]}
             teachr = teacher.find_one(teacher_query)
-            lt.append(teachr["CIN"])
+            if teachr:
+                teacher_id = teachr["Teacher_id"]
 
     except errors.PyMongoError as e:
         print(f"Database error: {e}")
-        return [], [], today, semestre
+        return [], [], today, semestre, teacher_id
 
-    return lectures, lt, today, semestre
+    return lectures, lt, today, semestre, teacher_id
 
 
 load_dotenv()
@@ -51,7 +52,8 @@ load_dotenv()
 client_id = os.getenv("ANAS_KEY")
 client = MongoClient(client_id)
 db = client["FaceDetection"]
-attendance = db["Attendance"]
+attendance = db["Attendance_test"]
+attendance_teacher = db["Attendance_Teacher"]
 timetable = db["Time_table"]
 teacher = db["Teacher"]
 subject = db["Subject"]
@@ -59,7 +61,7 @@ classe = db["Class"]
 student = db["Student"]
 
 # room = input()
-room = "A5"
+room = "7"
 
 mtcnn = MTCNN(
     image_size=160, margin=14, min_face_size=20, device="cpu", post_process=False
@@ -90,11 +92,12 @@ def ImageClass(n):
 
 vgg = VGGFace()
 records = {}
+teacher_records = {}
 other = 0
 font_scale = 1
 font_thickness = 2
 
-lectures, lt, day, semestre = updating_lists(room)
+lectures, lt, day, semestre, teacher_id = updating_lists(room)
 
 while True:
     now = datetime.now().time()
@@ -103,13 +106,14 @@ while True:
 
     if day != today:
         records = {}
-        lectures, lt, day, semestre = updating_lists(room)
+        lectures, lt, day, semestre, teacher_id = updating_lists(room)
 
     if len(lectures) == 0:
         continue
 
     if now >= datetime.strptime(lectures[0]["EndTime"], "%H:%M").time():
         records = {}
+        teacher_records = {}
         lectures.pop(0)
         continue
 
@@ -181,6 +185,7 @@ while True:
             found_st = attendance.find_one(find_query)
 
             if face_result["id"] in lt and found_st == None:
+
                 if float(face_result["confidence"]) > 0.9:
                     records[face_result["id"]] = {
                         "day": face_result["date"],
@@ -188,6 +193,21 @@ while True:
                         "date": datetime.now().strftime("%Y-%m-%d"),
                     }
                     lt.remove(face_result["id"])
+
+            find_query = {
+                "id": face_result["id"],
+                "timetable": lectures[0]["_id"],
+                "date": datetime.now().strftime("%Y-%m-%d"),
+            }
+            found_t = attendance_teacher.find_one(find_query)
+
+            if face_result["id"] == teacher_id and found_t == None:
+                if float(face_result["confidence"]) > 0.9:
+                    teacher_records[face_result["id"]] = {
+                        "day": face_result["date"],
+                        "timetable": lectures[0]["_id"],
+                        "date": datetime.now().strftime("%Y-%m-%d"),
+                    }
 
         for record_id, record in records.items():
             record_data = {"id": record_id, **record}
@@ -203,6 +223,22 @@ while True:
                 {"$setOnInsert": record_data},
                 upsert=True,
             )
+
+        for record_id, record in teacher_records.items():
+            record_data = {"id": record_id, **record}
+            result = attendance_teacher.update_one(
+                {
+                    "$and": [
+                        {"id": record_id},
+                        {"day": record["day"]},
+                        {"timetable": record["timetable"]},
+                        {"date": record["date"]},
+                    ]
+                },
+                {"$setOnInsert": record_data},
+                upsert=True,
+            )
+
     except errors.PyMongoError as e:
         print(f"Error updating attendance: {e}")
 
