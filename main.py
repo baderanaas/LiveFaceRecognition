@@ -4,13 +4,12 @@ import numpy as np
 from facenet_pytorch import MTCNN
 import os
 import pytz
-from datetime import datetime, timezone
+from datetime import datetime
 from dotenv import load_dotenv
 from pymongo import MongoClient, errors
 
 
 def updating_lists(room):
-    today = datetime.now().strftime("%A")
     month = int(datetime.now().strftime("%m"))
 
     if month <= 12 and month >= 9:
@@ -18,7 +17,10 @@ def updating_lists(room):
     elif month >= 1 and month <= 5:
         semestre = 2
 
+    today = datetime.now().strftime("%A")
     lectures = []
+    lt = []
+    teacher_id = None
 
     try:
         query = {"Room": room, "Day": today, "Semestre": semestre}
@@ -28,7 +30,6 @@ def updating_lists(room):
         for doc in result:
             lectures.append(doc)
 
-        lt = []
         if len(lectures) > 0:
             students_query = {"class_id": lectures[0]["class_id"]}
             students = student.find(students_query)
@@ -49,7 +50,7 @@ def updating_lists(room):
 
 load_dotenv()
 
-client_id = os.getenv("ANAS_KEY")
+client_id = os.getenv("PPP_KEY")
 client = MongoClient(client_id)
 db = client["FaceDetection"]
 attendance = db["Attendance_test"]
@@ -132,6 +133,7 @@ while True:
         frame = cv2.GaussianBlur(frame, ksize=(3, 3), sigmaX=0)
         frame_face = frame.copy()
         frame_face = cv2.resize(frame_face, (640, 640), interpolation=cv2.INTER_CUBIC)
+
         boxes, probs = mtcnn.detect(frame_face, landmarks=False)
 
         face_results = []
