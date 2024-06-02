@@ -42,7 +42,7 @@ def updating_lists(room):
             teachr = teacher.find_one(teacher_query)
             if teachr:
                 teacher_id = teachr["Teacher_id"]
-                
+
     except errors.PyMongoError as e:
         print(f"Database error: {e}")
         return [], [], today, semestre, teacher_id
@@ -55,7 +55,7 @@ load_dotenv()
 client_id = os.getenv("PPP_KEY")
 client = MongoClient(client_id)
 db = client["FaceDetection"]
-attendance = db["Attendance_test"]
+attendance = db["Attendance"]
 attendance_teacher = db["Attendance_Teacher"]
 timetable = db["Time_table"]
 teacher = db["Teacher"]
