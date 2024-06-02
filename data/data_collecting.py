@@ -6,7 +6,7 @@ import os
 
 mtcnn_detector = MTCNN(scale_factor=0.7, min_face_size=20)
 
-videos_folder = "videos"
+videos_folder = "data/videos"
 video_files = os.listdir(videos_folder)
 
 for video_file in video_files:
@@ -27,7 +27,6 @@ for video_file in video_files:
     while True:
         ret, frame = cap.read()
 
-        cv2.imshow("Live Face Recognition", frame)
         if cv2.waitKey(1) == ord("q") or face_count >= 200:
             break
 
@@ -62,6 +61,6 @@ for video_file in video_files:
             continue
 
         data.clear()
-        cap.release()
+    cap.release()
 
 cv2.destroyAllWindows()
