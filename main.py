@@ -14,8 +14,10 @@ def updating_lists(room):
 
     if month <= 12 and month >= 9:
         semestre = 1
-    elif month >= 1 and month <= 5:
+    elif month >= 1 and month <= 6:
         semestre = 2
+    else:
+        semestre = 0
 
     today = datetime.now().strftime("%A")
     lectures = []
@@ -23,7 +25,7 @@ def updating_lists(room):
     teacher_id = None
 
     try:
-        query = {"Room": room, "Day": today, "Semestre": semestre}
+        query = {"Room": room, "Day": today, "Semester": semestre}
         sort_order = [("StartTime", 1)]
 
         result = timetable.find(query).sort(sort_order)
@@ -40,7 +42,7 @@ def updating_lists(room):
             teachr = teacher.find_one(teacher_query)
             if teachr:
                 teacher_id = teachr["Teacher_id"]
-
+                
     except errors.PyMongoError as e:
         print(f"Database error: {e}")
         return [], [], today, semestre, teacher_id
@@ -62,7 +64,7 @@ classe = db["Class"]
 student = db["Student"]
 
 # room = input()
-room = "7"
+room = "212"
 
 mtcnn = MTCNN(
     image_size=160, margin=14, min_face_size=20, device="cpu", post_process=False
@@ -72,7 +74,7 @@ cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1200)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1600)
 
-data_folder_path = "data"
+data_folder_path = "data/ids"
 folder_names = [
     name
     for name in os.listdir(data_folder_path)
